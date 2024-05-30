@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title id="pageTitle"></title>
+  <meta name="description" id="metaDescription" content="">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 200px;
+      margin-bottom: 10px;
+    }
+
+    .output {
+      background-color: #f4f4f4;
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1 id="mainTitle"></h1>
+  <textarea id="jsonInput" placeholder="Paste your JSON here"></textarea>
+  <button onclick="extractFields()">Extract Fields</button>
+  <div id="output" class="output"></div>
+
+  <script>
+    function extractFields() {
+      const jsonString = document.getElementById('jsonInput').value;
+      const data = JSON.parse(jsonString);
+
+      function removeMarkdownImageTags(text) {
+        return text.replace(/!\[.*?\]\(.*?\)/g, '');
+      }
+
+      function extractFieldsRecursive(obj, sectionOrder) {
+        let result = '';
+
+        if (typeof obj === 'object') {
+          if (obj.title && sectionOrder.includes('title')) {
+            result += `<h2>${obj.title}</h2>`;
+          }
+
+          if (obj.description && sectionOrder.includes('description')) {
+            const description = obj.description;
+            document.getElementById('metaDescription').setAttribute('content', description);
+            result += `<p>${description}</p>`;
+          }
+
+          if (obj.contributors && sectionOrder.includes('contributors')) {
+            result += '<h3>Contributors</h3>';
+            obj.contributors.forEach(contributor => {
+              result += `<p>${contributor.name}</p>`;
+            });
+          }
+
+          if (obj.coverUrl && sectionOrder.includes('coverUrl')) {
+            result += `<img src="${obj.coverUrl}" alt="Cover Image">`;
+          }
+
+          if (obj.sections) {
+            obj.sections.forEach(section => {
+
+              if (section.cards) {
+                section.cards.forEach(card => {
+                  if (card.markdown) {
+                    const markdownWithoutImages = removeMarkdownImageTags(card.markdown);
+                    result += `<p>${markdownWithoutImages}</p>`;
+                  }
+                });
+              }
+            });
+          }
+
+          if (Array.isArray(obj)) {
+            obj.forEach(item => {
+ 
+              if (item.sections) {
+                item.sections.forEach(section => {
+                  if (section.heading) {
+                    result += `<h3>${section.heading}</h3>`;
+                  }
+                  if (section.cards) {
+                    section.cards.forEach(card => {
+                      if (card.markdown) {
+                        const markdownWithoutImages = removeMarkdownImageTags(card.markdown);
+                        result += `<p>${markdownWithoutImages}</p>`;
+                      }
+                    });
+                  }
+                });
+              }
+            });
+          }
+
+          if (obj.segments && sectionOrder.includes('segments')) {
+            sectionOrder.forEach(section => {
+              if (obj.segments[section]) {
+                result += extractFieldsRecursive(obj.segments[section], ['title', 'heading', 'markdown']);
+              }
+            });
+          }
+        }
+
+        return result;
+      }
+
+      const mainTitle = data.title;
+      document.getElementById('mainTitle').textContent = mainTitle;
+      document.getElementById('pageTitle').textContent = mainTitle;
+
+      const sectionOrder = [
+        'title',
+        'description',
+        'contributors',
+        'coverUrl',
+        'segments',
+        'overview',
+        'introduction',
+        'favouriteQuote',
+        'hereAreTheInsights',
+        'insights',
+        'putInAction',
+        'conclusion'
+      ];
+
+      const extractedFields = extractFieldsRecursive(data, sectionOrder);
+      const outputElement = document.getElementById('output');
+      outputElement.innerHTML = extractedFields;
+    }
+  </script>
+</body>
+</html>
